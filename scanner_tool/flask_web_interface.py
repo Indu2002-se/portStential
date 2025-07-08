@@ -2167,7 +2167,7 @@ def parse_port_range(port_range: str) -> List[int]:
     
     return sorted(list(set(ports)))
 
-def scan_worker(scan_id: str, target: str, ports: List[int], thread_count: int, timeout: float):
+def scan_worker(scan_id: str, target: str, ports: List[int], thread_count: int, timeout: float, user_id: int = None):
     """
     Step 11: Worker function to execute a scan in a separate thread.
     This function runs in the background and performs the actual port scanning.
@@ -2178,6 +2178,7 @@ def scan_worker(scan_id: str, target: str, ports: List[int], thread_count: int, 
         ports: List of ports to scan
         thread_count: Number of threads to use
         timeout: Socket timeout in seconds
+        user_id: ID of the user who initiated the scan
     """
     try:
         # Step 11.1: Initialize scan state
@@ -2186,7 +2187,8 @@ def scan_worker(scan_id: str, target: str, ports: List[int], thread_count: int, 
             'progress': 0,           # 0% progress initially
             'start_time': datetime.now(),  # Record start time
             'logs': [],              # Empty log list
-            'results': {}            # Empty results dict
+            'results': {},           # Empty results dict
+            'user_id': user_id       # Store user ID with scan data
         }
         
         # Step 11.2: Resolve target hostname to IP address
@@ -2286,7 +2288,13 @@ def complete_scan(scan_id: str, status: str):
         active_scans[scan_id]['end_time'] = datetime.now()
         
         # Store results in the global results dictionary for later access
-        scan_results[scan_id] = active_scans[scan_id]['results']
+        scan_results[scan_id] = {
+            'results': active_scans[scan_id]['results'],
+            'user_id': active_scans[scan_id].get('user_id'),  # Preserve user ID
+            'start_time': active_scans[scan_id]['start_time'],
+            'end_time': active_scans[scan_id]['end_time'],
+            'status': status
+        }
 
 # Step 14: Define Flask routes
 @app.route('/')
@@ -2596,6 +2604,7 @@ def api_local_ip():
         return jsonify({'ip': "127.0.0.1"})
 
 @app.route('/api/scan/start', methods=['POST'])
+@login_required  # Add login_required decorator to ensure user is authenticated
 def api_start_scan():
     """
     Step 14.3: API endpoint to start a scan.
@@ -2604,6 +2613,11 @@ def api_start_scan():
     # Step 14.3.1: Get JSON data from request
     data = request.json
     import multiprocessing
+    
+    # Get current user ID
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'error': 'User not authenticated'}), 401
     
     # Step 14.3.2: Validate input
     if not data or 'target' not in data:
@@ -2660,7 +2674,7 @@ def api_start_scan():
     # This allows the web interface to remain responsive during scanning
     scan_thread = threading.Thread(
         target=scan_worker,
-        args=(scan_id, target, ports, thread_count, timeout),
+        args=(scan_id, target, ports, thread_count, timeout, user_id),  # Add user_id parameter
         daemon=True  # Daemon thread will be terminated when main thread exits
     )
     scan_thread.start()
@@ -2669,17 +2683,28 @@ def api_start_scan():
     return jsonify({'scan_id': scan_id})
 
 @app.route('/api/scan/<scan_id>/status', methods=['GET'])
+@login_required  # Add login_required decorator to ensure user is authenticated
 def api_scan_status(scan_id):
     """
     Step 14.4: API endpoint to get scan status.
     This allows the client to poll for updates on an ongoing scan.
     """
+    # Get current user ID
+    current_user_id = session.get('user_id')
+    if not current_user_id:
+        return jsonify({'error': 'User not authenticated'}), 401
+    
     # Step 14.4.1: Check if scan exists
     if scan_id not in active_scans:
         return jsonify({'error': 'Scan not found'}), 404
     
     # Step 14.4.2: Get scan data
     scan_data = active_scans[scan_id]
+    
+    # Check if scan belongs to current user
+    scan_user_id = scan_data.get('user_id')
+    if scan_user_id != current_user_id:
+        return jsonify({'error': 'You do not have permission to view this scan.'}), 403
     
     # Step 14.4.3: Add CPU core information if not already present
     if 'cpu_cores' not in scan_data:
@@ -2733,14 +2758,26 @@ def api_scan_status(scan_id):
     return jsonify(response)
 
 @app.route('/api/scan/<scan_id>/stop', methods=['POST'])
+@login_required  # Add login_required decorator to ensure user is authenticated
 def api_stop_scan(scan_id):
     """
     Step 14.5: API endpoint to stop a scan.
     This allows users to cancel an ongoing scan.
     """
+    # Get current user ID
+    current_user_id = session.get('user_id')
+    if not current_user_id:
+        return jsonify({'error': 'User not authenticated'}), 401
+    
     # Step 14.5.1: Check if scan exists
     if scan_id not in active_scans:
         return jsonify({'error': 'Scan not found'}), 404
+    
+    # Check if scan belongs to current user
+    scan_data = active_scans[scan_id]
+    scan_user_id = scan_data.get('user_id')
+    if scan_user_id != current_user_id:
+        return jsonify({'error': 'You do not have permission to stop this scan.'}), 403
     
     # Step 14.5.2: Mark the scan as stopped
     complete_scan(scan_id, 'stopped')
@@ -2921,98 +2958,117 @@ def api_dashboard_data():
     API endpoint to get dashboard data including all scans, statistics, and security issues.
     This provides data for the real-time dashboard.
     """
-    # Collect all completed scans (from both active_scans and scan_results)
+    # Get current user ID
+    current_user_id = session.get('user_id')
+    if not current_user_id:
+        return jsonify({'error': 'User not authenticated'}), 401
+    
+    # Collect all completed scans for the current user
     all_scans = []
     
     # Add completed scans from scan_results
-    for scan_id, results in scan_results.items():
-        if scan_id in active_scans:
-            scan_data = active_scans[scan_id]
-            
-            # Extract target from scan_id (format: timestamp_target)
-            target = scan_id.split('_', 1)[1] if '_' in scan_id else 'unknown'
-            
-            # Count open ports - safely handle different result formats
-            try:
-                # Check if results is a list of dictionaries with 'status' key
-                if isinstance(results, list) and all(isinstance(r, dict) for r in results):
-                    open_ports_count = len([r for r in results if r.get('status') == 'open'])
-                # If results is a simple list of port numbers
-                elif isinstance(results, list) and all(isinstance(r, int) for r in results):
-                    open_ports_count = len(results)  # All ports in this list are considered open
-                else:
-                    # For any other format, default to 0
-                    app.logger.warning(f"Unexpected scan results format for scan_id {scan_id}: {type(results)}")
-                    open_ports_count = 0
-            except Exception as e:
-                app.logger.error(f"Error processing scan results for {scan_id}: {str(e)}")
+    for scan_id, scan_data in scan_results.items():
+        # Skip scans that don't belong to the current user
+        if isinstance(scan_data, dict):
+            scan_user_id = scan_data.get('user_id')
+            if scan_user_id != current_user_id:
+                continue
+        else:
+            # Legacy data format - skip if we can't determine ownership
+            continue
+        
+        # Get results from scan_data
+        results = scan_data.get('results', {})
+        
+        # Extract target from scan_id (format: timestamp_target)
+        target = scan_id.split('_', 1)[1] if '_' in scan_id else 'unknown'
+        
+        # Count open ports - safely handle different result formats
+        try:
+            # Check if results is a list of dictionaries with 'status' key
+            if isinstance(results, list) and all(isinstance(r, dict) for r in results):
+                open_ports_count = len([r for r in results if r.get('status') == 'open'])
+            # If results is a simple list of port numbers
+            elif isinstance(results, list) and all(isinstance(r, int) for r in results):
+                open_ports_count = len(results)  # All ports in this list are considered open
+            else:
+                # For any other format, default to 0
+                app.logger.warning(f"Unexpected scan results format for scan_id {scan_id}: {type(results)}")
                 open_ports_count = 0
+        except Exception as e:
+            app.logger.error(f"Error processing scan results for {scan_id}: {str(e)}")
+            open_ports_count = 0
+        
+        # Extract services - safely handle different result formats
+        services = []
+        try:
+            if isinstance(results, list) and all(isinstance(r, dict) for r in results):
+                for result in results:
+                    if result.get('service') and result.get('service') not in services:
+                        services.append(result.get('service'))
+            # If we have a custom service mapping based on port numbers
+            elif isinstance(results, list) and all(isinstance(r, int) for r in results):
+                # Common port to service mappings
+                port_services = {
+                    21: 'FTP', 22: 'SSH', 23: 'Telnet', 25: 'SMTP', 
+                    53: 'DNS', 80: 'HTTP', 443: 'HTTPS', 3306: 'MySQL',
+                    3389: 'RDP', 5900: 'VNC', 8080: 'HTTP-Proxy'
+                }
+                for port in results:
+                    if port in port_services and port_services[port] not in services:
+                        services.append(port_services[port])
+        except Exception as e:
+            app.logger.error(f"Error extracting services for {scan_id}: {str(e)}")
+        
+        # Identify potential vulnerabilities - safely handle different result formats
+        vulnerabilities = []
+        try:
+            common_vulnerable_services = ['telnet', 'ftp']
+            common_vulnerable_ports = {23: 'telnet', 21: 'ftp'}
             
-            # Extract services - safely handle different result formats
-            services = []
-            try:
-                if isinstance(results, list) and all(isinstance(r, dict) for r in results):
-                    for result in results:
-                        if result.get('service') and result.get('service') not in services:
-                            services.append(result.get('service'))
-                # If we have a custom service mapping based on port numbers
-                elif isinstance(results, list) and all(isinstance(r, int) for r in results):
-                    # Common port to service mappings
-                    port_services = {
-                        21: 'FTP', 22: 'SSH', 23: 'Telnet', 25: 'SMTP', 
-                        53: 'DNS', 80: 'HTTP', 443: 'HTTPS', 3306: 'MySQL',
-                        3389: 'RDP', 5900: 'VNC', 8080: 'HTTP-Proxy'
-                    }
-                    for port in results:
-                        if port in port_services and port_services[port] not in services:
-                            services.append(port_services[port])
-            except Exception as e:
-                app.logger.error(f"Error extracting services for {scan_id}: {str(e)}")
-            
-            # Identify potential vulnerabilities - safely handle different result formats
-            vulnerabilities = []
-            try:
-                common_vulnerable_services = ['telnet', 'ftp']
-                common_vulnerable_ports = {23: 'telnet', 21: 'ftp'}
-                
-                if isinstance(results, list) and all(isinstance(r, dict) for r in results):
-                    # Process dictionary-based results
-                    for result in results:
-                        service = result.get('service', '').lower()
-                        if service in common_vulnerable_services:
-                            vulnerabilities.append({
-                                'port': result.get('port'),
-                                'service': service,
-                                'severity': 'high'
-                            })
-                elif isinstance(results, list) and all(isinstance(r, int) for r in results):
-                    # Process port number list results
-                    for port in results:
-                        if port in common_vulnerable_ports:
-                            vulnerabilities.append({
-                                'port': port,
-                                'service': common_vulnerable_ports[port],
-                                'severity': 'high'
-                            })
-            except Exception as e:
-                app.logger.error(f"Error identifying vulnerabilities for {scan_id}: {str(e)}")
-            
-            # Create scan entry
-            scan_info = {
-                'scan_id': scan_id,
-                'target': target,
-                'timestamp': scan_data.get('start_time').isoformat() if scan_data.get('start_time') else None,
-                'status': scan_data.get('status', 'unknown'),
-                'open_ports_count': open_ports_count,
-                'services': services[:3],  # Limit to 3 services for display
-                'vulnerabilities': vulnerabilities
-            }
-            
-            all_scans.append(scan_info)
+            if isinstance(results, list) and all(isinstance(r, dict) for r in results):
+                # Process dictionary-based results
+                for result in results:
+                    service = result.get('service', '').lower()
+                    if service in common_vulnerable_services:
+                        vulnerabilities.append({
+                            'port': result.get('port'),
+                            'service': service,
+                            'severity': 'high'
+                        })
+            elif isinstance(results, list) and all(isinstance(r, int) for r in results):
+                # Process port number list results
+                for port in results:
+                    if port in common_vulnerable_ports:
+                        vulnerabilities.append({
+                            'port': port,
+                            'service': common_vulnerable_ports[port],
+                            'severity': 'high'
+                        })
+        except Exception as e:
+            app.logger.error(f"Error identifying vulnerabilities for {scan_id}: {str(e)}")
+        
+        # Create scan entry
+        scan_info = {
+            'scan_id': scan_id,
+            'target': target,
+            'timestamp': scan_data.get('start_time').isoformat() if scan_data.get('start_time') else None,
+            'status': scan_data.get('status', 'unknown'),
+            'open_ports_count': open_ports_count,
+            'services': services[:3],  # Limit to 3 services for display
+            'vulnerabilities': vulnerabilities
+        }
+        
+        all_scans.append(scan_info)
     
     # Also include running scans that might not have results yet
-    for scan_id, scan_data in active_scans.items():
-        if scan_id not in scan_results and scan_data.get('status') == 'running':
+    for scan_id, active_data in active_scans.items():
+        # Skip scans that don't belong to the current user
+        scan_user_id = active_data.get('user_id')
+        if scan_user_id != current_user_id:
+            continue
+            
+        if scan_id not in scan_results and active_data.get('status') == 'running':
             # Extract target from scan_id
             target = scan_id.split('_', 1)[1] if '_' in scan_id else 'unknown'
             
@@ -3020,7 +3076,7 @@ def api_dashboard_data():
             scan_info = {
                 'scan_id': scan_id,
                 'target': target,
-                'timestamp': scan_data.get('start_time').isoformat() if scan_data.get('start_time') else None,
+                'timestamp': active_data.get('start_time').isoformat() if active_data.get('start_time') else None,
                 'status': 'running',
                 'open_ports_count': 0,
                 'services': [],
@@ -3117,19 +3173,52 @@ def api_scan_details(scan_id):
     API endpoint to get detailed information about a specific scan.
     This provides data for the scan details modal.
     """
+    # Get current user ID
+    current_user_id = session.get('user_id')
+    if not current_user_id:
+        return jsonify({'error': 'User not authenticated'}), 401
+    
     # Check if scan exists
-    if scan_id not in active_scans:
+    if scan_id not in active_scans and scan_id not in scan_results:
         # Return a helpful error message instead of just "Scan not found"
         return jsonify({
             'error': 'Scan not found. The scan may have been deleted or has not been started.',
             'scan_id': scan_id
         }), 404
     
-    scan_data = active_scans[scan_id]
+    # Check if scan belongs to current user
+    if scan_id in active_scans:
+        scan_data = active_scans[scan_id]
+        scan_user_id = scan_data.get('user_id')
+        if scan_user_id != current_user_id:
+            return jsonify({'error': 'You do not have permission to view this scan.'}), 403
+    elif scan_id in scan_results:
+        scan_data = scan_results[scan_id]
+        if isinstance(scan_data, dict):
+            scan_user_id = scan_data.get('user_id')
+            if scan_user_id != current_user_id:
+                return jsonify({'error': 'You do not have permission to view this scan.'}), 403
+        else:
+            # Legacy data format - can't verify ownership
+            return jsonify({'error': 'Cannot verify scan ownership.'}), 403
+    
+    # Get scan data from active_scans or scan_results
+    if scan_id in active_scans:
+        scan_data = active_scans[scan_id]
+    else:
+        scan_data = scan_results[scan_id]
+        # For legacy data format, convert to new format
+        if not isinstance(scan_data, dict):
+            scan_data = {
+                'results': scan_data,
+                'status': 'completed',
+                'start_time': datetime.now(),  # Use current time as fallback
+                'end_time': datetime.now()     # Use current time as fallback
+            }
     
     # Calculate scan duration
     duration = 0
-    if 'end_time' in scan_data and scan_data['start_time']:
+    if 'end_time' in scan_data and scan_data.get('start_time'):
         try:
             duration = (scan_data['end_time'] - scan_data['start_time']).total_seconds()
         except Exception as e:
