@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, session
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify
 from supabase import create_client, Client
 import os
 from functools import wraps
@@ -44,7 +44,7 @@ def signup():
                 return redirect(url_for('auth.signup'))
 
             # Use site_url for email redirect instead of url_for
-            redirect_url = f"{site_url}/login" if site_url != 'http://localhost:4000' else url_for('auth.login', _external=True)
+            redirect_url = f"{site_url}/auth/confirm" if site_url != 'http://localhost:4000' else url_for('auth.confirm_email', _external=True)
             
             # Sign up the user with Supabase Auth
             auth_response = supabase.auth.sign_up({
@@ -86,6 +86,26 @@ def signup():
             return redirect(url_for('auth.signup'))
             
     return render_template('auth/signup.html')
+
+@auth.route('/confirm')
+def confirm_email():
+    """Handle email confirmation redirects from Supabase"""
+    # Get token parameters from query string
+    token_hash = request.args.get('token_hash')
+    type_param = request.args.get('type')
+    
+    if not token_hash or not type_param:
+        flash('Invalid confirmation link', 'error')
+        return redirect(url_for('auth.login'))
+    
+    try:
+        # The user is already confirmed by Supabase at this point
+        # We just need to redirect them to the login page with a success message
+        flash('Email confirmed successfully! You can now log in.', 'success')
+        return redirect(url_for('auth.login'))
+    except Exception as e:
+        flash(f'Error confirming email: {e}', 'error')
+        return redirect(url_for('auth.login'))
 
 @auth.route('/login', methods=['GET', 'POST'])
 def login():
