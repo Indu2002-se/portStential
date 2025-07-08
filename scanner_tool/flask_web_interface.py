@@ -3203,7 +3203,6 @@ def run():
     create_templates()
     create_css()
     create_js()
-    create_404_template()  # Add 404 template
     
     # Step 18.3: Set host to 0.0.0.0 to listen on all interfaces
     # This allows access from other computers on the network
@@ -3217,37 +3216,12 @@ def run():
 @app.errorhandler(404)
 def page_not_found(e):
     """Handle 404 errors gracefully"""
-    if request.path.startswith('/auth/callback') or request.path.startswith('/callback'):
+    if request.path.startswith(('/auth/callback', '/callback', '/auth/confirm')):
         # This is likely a Supabase auth callback, redirect to login
         return redirect(url_for('auth.login'))
     return render_template('404.html'), 404
 
-# Create a simple 404 template if it doesn't exist
-def create_404_template():
-    """Create a 404 template if it doesn't exist"""
-    template_path = os.path.join('scanner_tool', 'templates', '404.html')
-    if not os.path.exists(template_path):
-        with open(template_path, 'w') as f:
-            f.write("""
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Page Not Found</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
-</head>
-<body>
-    <div class="container">
-        <div class="card tech-card">
-            <h1>404 - Page Not Found</h1>
-            <p>The page you are looking for does not exist.</p>
-            <a href="{{ url_for('index') }}" class="btn btn-primary tech-btn">Go Home</a>
-        </div>
-    </div>
-</body>
-</html>
-            """)
+# 404 template is now a permanent file in scanner_tool/templates/404.html
 
 # Function already defined above
 
