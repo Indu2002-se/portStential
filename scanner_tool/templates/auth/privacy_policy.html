@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Privacy Policy - PortSentinel</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='landing.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='auth.css') }}">
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@600;700&display=swap" rel="stylesheet">
+    <style>
+        .privacy-container {
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 20px;
+            background: rgba(13, 17, 23, 0.8);
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            color: #e0e0e0;
+        }
+        .privacy-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .privacy-section {
+            margin-bottom: 25px;
+        }
+        .privacy-section h2 {
+            color: #64ffda;
+            border-bottom: 1px solid rgba(100, 255, 218, 0.3);
+            padding-bottom: 8px;
+            margin-bottom: 15px;
+        }
+        .privacy-section p, .privacy-section ul {
+            line-height: 1.6;
+            margin-bottom: 15px;
+        }
+        .privacy-section ul {
+            padding-left: 20px;
+        }
+        .back-link {
+            display: inline-block;
+            margin-top: 20px;
+            color: #64ffda;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+        .back-link:hover {
+            text-shadow: 0 0 8px rgba(100, 255, 218, 0.8);
+        }
+    </style>
+</head>
+<body>
+    <div class="background-animation"></div>
+
+    <div class="theme-switcher-corner">
+        <button class="theme-btn" id="theme-switcher-btn">🎨</button>
+        <div class="theme-dropdown" id="theme-dropdown">
+            <a href="#" data-theme="default">Default</a>
+            <a href="#" data-theme="light">Light</a>
+            <a href="#" data-theme="cyberpunk">Cyberpunk</a>
+        </div>
+    </div>
+
+    <div class="privacy-container">
+        <div class="privacy-header">
+            <h1 class="cyber-glitch" data-text="PRIVACY POLICY">PRIVACY POLICY</h1>
+            <div class="cyber-scanner"></div>
+        </div>
+
+        <div class="privacy-section">
+            <h2>1. Introduction</h2>
+            <p>Welcome to PortSentinel. We are committed to protecting your personal information and your right to privacy. This Privacy Policy explains how we collect, use, and share information about you when you use our services.</p>
+        </div>
+
+        <div class="privacy-section">
+            <h2>2. Information We Collect</h2>
+            <p>We collect the following types of information:</p>
+            <ul>
+                <li>Account information: username, email, and password</li>
+                <li>Usage data: IP addresses scanned, scan results, and scan history</li>
+                <li>Technical data: browser type, operating system, and device information</li>
+                <li>Cookies and similar technologies to track activity on our service</li>
+            </ul>
+        </div>
+
+        <div class="privacy-section">
+            <h2>3. How We Use Your Information</h2>
+            <p>We use your information to:</p>
+            <ul>
+                <li>Provide and maintain our services</li>
+                <li>Improve and optimize our services</li>
+                <li>Understand how users interact with our services</li>
+                <li>Detect and prevent fraud and security incidents</li>
+                <li>Communicate with you about our services</li>
+            </ul>
+        </div>
+
+        <div class="privacy-section">
+            <h2>4. Data Security</h2>
+            <p>We implement appropriate security measures to protect your personal information from unauthorized access, alteration, disclosure, or destruction. However, please note that no method of transmission over the internet or electronic storage is 100% secure.</p>
+        </div>
+
+        <div class="privacy-section">
+            <h2>5. Data Retention</h2>
+            <p>We retain your personal information only for as long as necessary to fulfill the purposes for which we collected it, including for the purposes of satisfying any legal, accounting, or reporting requirements.</p>
+        </div>
+
+        <div class="privacy-section">
+            <h2>6. Your Rights</h2>
+            <p>Depending on your location, you may have certain rights regarding your personal information, such as:</p>
+            <ul>
+                <li>Access to your personal information</li>
+                <li>Correction of inaccurate information</li>
+                <li>Deletion of your personal information</li>
+                <li>Objection to processing of your information</li>
+                <li>Data portability</li>
+            </ul>
+        </div>
+
+        <div class="privacy-section">
+            <h2>7. Changes to This Privacy Policy</h2>
+            <p>We may update our Privacy Policy from time to time. We will notify you of any changes by posting the new Privacy Policy on this page and updating the "Last Updated" date.</p>
+        </div>
+
+        <div class="privacy-section">
+            <h2>8. Contact Us</h2>
+            <p>If you have any questions about this Privacy Policy, please contact us at privacy@portsentinel.com.</p>
+        </div>
+
+        <a href="{{ url_for('auth.signup') }}" class="back-link">← Back to Sign Up</a>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Theme Switcher
+            const themeSelect = document.getElementById('theme-select');
+            const themeSwitcherBtn = document.getElementById('theme-switcher-btn');
+            const themeDropdown = document.getElementById('theme-dropdown');
+
+            function applyTheme(themeName) {
+                document.body.className = '';
+                if (themeName !== 'default') {
+                    document.body.classList.add(themeName + '-theme');
+                }
+                localStorage.setItem('dashboardTheme', themeName);
+            }
+
+            // Set initial theme from localStorage
+            const savedTheme = localStorage.getItem('dashboardTheme') || 'default';
+            applyTheme(savedTheme);
+
+            // Dropdown theme switcher
+            if (themeSwitcherBtn) {
+                themeSwitcherBtn.addEventListener('click', () => {
+                    themeDropdown.classList.toggle('active');
+                });
+
+                themeDropdown.addEventListener('click', (e) => {
+                    if (e.target.tagName === 'A') {
+                        e.preventDefault();
+                        const theme = e.target.getAttribute('data-theme');
+                        applyTheme(theme);
+                        themeDropdown.classList.remove('active');
+                    }
+                });
+            }
+        });
+    </script>
+    <script src="{{ url_for('static', filename='js/responsive-navbar.js') }}"></script>
+</body>
+</html> 

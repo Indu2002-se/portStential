@@ -1,0 +1,14 @@
+{
+  "builds": [
+    {
+      "src": "scanner_tool/flask_web_interface.py",
+      "use": "@vercel/python"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "scanner_tool/flask_web_interface.py"
+    }
+  ]
+} 

@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PortSentinel</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1a1b26;
+            color: #fff;
+            min-height: 100vh;
+        }
+
+        .nav-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            margin: 20px;
+            background: rgba(26, 27, 38, 0.8);
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+
+        .logo {
+            color: #7aa2f7;
+            font-size: 24px;
+            font-weight: bold;
+            text-decoration: none;
+        }
+
+        .nav-center {
+            background: rgba(67, 70, 98, 0.5);
+            padding: 8px;
+            border-radius: 25px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .nav-link {
+            color: #fff;
+            text-decoration: none;
+            padding: 8px 20px;
+            border-radius: 20px;
+            transition: background-color 0.3s;
+        }
+
+        .nav-link:hover {
+            background: rgba(122, 162, 247, 0.2);
+        }
+
+        .nav-link.active {
+            background: #7aa2f7;
+            color: #1a1b26;
+        }
+
+        .nav-right {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .username {
+            background: rgba(67, 70, 98, 0.5);
+            padding: 8px 15px;
+            border-radius: 20px;
+        }
+
+        .logout-btn {
+            background: #bb9af7;
+            color: #1a1b26;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #7dcfff;
+            margin: 20px;
+            font-size: 18px;
+        }
+
+        .main-content {
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+    <nav class="nav-container">
+        <a href="/" class="logo">PortSentinel</a>
+        <div class="nav-center">
+            <a href="/" class="nav-link active">Home</a>
+            <a href="/scanner" class="nav-link">Scanner</a>
+            <a href="/dashboard" class="nav-link">Dashboard</a>
+        </div>
+        <div class="nav-right">
+            <div class="username">indu2002</div>
+            <a href="/auth/logout" class="logout-btn">Logout</a>
+        </div>
+    </nav>
+    <div class="subtitle">Penetrate networks and map service vulnerabilities</div>
+    <div class="main-content">
+        <!-- Your main content here -->
+    </div>
+</body>
+</html>
+
+        <!-- Analytics Modal -->
+        <div class="modal" id="analyticsModal">
+            <div class="modal-content" style="max-width: 1400px; width: 95%; max-height: 90vh;">
+                <button class="close-modal" onclick="closeAnalyticsModal()">&times;</button>
+                <div class="container">
+                    <div class="header">
+                        <div class="logo">🛡️ NetScan Dashboard</div>
+                        <div class="nav-buttons">
+                            <button class="btn btn-primary" onclick="startNewScan()">New Scan</button>
+                            <button class="btn btn-secondary" onclick="showSettings()">Settings</button>
+                            <button class="btn btn-secondary" onclick="toggleCustomization()">Customize</button>
+                        </div>
+                    </div>
+                    <!-- Rest of your dashboard content will go here -->
+                    <div class="dashboard-grid">
+                        <!-- Statistics Widget -->
+                        <div class="widget" id="statistics-widget">
+                            <div class="widget-header">
+                                <h3 class="widget-title">Statistics Overview</h3>
+                                <div class="widget-icon">📊</div>
+                            </div>
+                            <div class="stats-grid">
+                                <div class="stat-item">
+                                    <div class="stat-number">47</div>
+                                    <div class="stat-label">Total Scans</div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-number">12</div>
+                                    <div class="stat-label">Active Hosts</div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-number">156</div>
+                                    <div class="stat-label">Open Ports</div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-number">3</div>
+                                    <div class="stat-label">Vulnerabilities</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        function showAnalytics() {
+            const modal = document.getElementById('analyticsModal');
+            modal.style.display = 'block';
+            addNotification('Analytics', 'Analytics dashboard opened');
+        }
+
+        function closeAnalyticsModal() {
+            const modal = document.getElementById('analyticsModal');
+            modal.style.display = 'none';
+        }
+
+        // Update window click handler to close analytics modal as well
+        window.onclick = function(event) {
+            const scanModal = document.getElementById('scanModal');
+            const analyticsModal = document.getElementById('analyticsModal');
+            if (event.target === scanModal) {
+                closeScanModal();
+            }
+            if (event.target === analyticsModal) {
+                closeAnalyticsModal();
+            }
+        }
+
+        // Close modal when clicking outside 

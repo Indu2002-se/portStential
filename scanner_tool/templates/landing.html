@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PortSentinel - Advanced Port Scanner</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='landing.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/responsive-navbar.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Responsive Glassy Navbar -->
+    <nav class="glassy-nav">
+        <div class="nav-content">
+            <button id="mobile-menu-btn" class="mobile-menu-btn" aria-label="Toggle menu" aria-expanded="false">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+            <div class="logo">PortSentinel</div>
+            <div class="nav-links-container">
+                <div class="nav-links">
+                    <a href="#features">Features</a>
+                    <a href="#about">About</a>
+                    <a href="#feedback">Feedback</a>
+                    {% if session.get('user_id') %}
+                        <a href="{{ url_for('dashboard') }}">Dashboard</a>
+                    {% endif %}
+                </div>
+            </div>
+           
+            <div class="nav-right-actions">
+                <div class="theme-switcher">
+                    <select class="theme-select" id="theme-select">
+                        <option value="default">Default Theme</option>
+                        <option value="light">Light Theme</option>
+                        <option value="cyberpunk">Cyberpunk Theme</option>
+                    </select>
+                </div>
+                {% if session.get('user_id') %}
+                    <a href="{{ url_for('scanner_page') }}" class="nav-cta">Scanner Dashboard</a>
+                {% else %}
+                    <a href="{{ url_for('auth.login') }}" class="nav-cta">Get Started</a>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+
+    <div class="landing-container">
+        <!-- Hero Section -->
+        <section class="hero-section">
+            <canvas id="binaryRain"></canvas>
+            <header>
+                <h1>PortSentinel</h1>
+                <p class="subtitle">Advanced Port Scanning & Network Security</p>
+            </header>
+            
+            <div class="hero-content">
+                <h2>Secure Your Network Infrastructure</h2>
+                <p>Discover open ports, identify vulnerabilities, and strengthen your network security with our advanced port scanning solution.</p>
+                {% if session.get('user_id') %}
+                    <a href="{{ url_for('scanner_page') }}" class="cta-button">Access Scanner</a>
+                {% else %}
+                    <a href="{{ url_for('auth.signup') }}" class="cta-button">Create Free Account</a>
+                {% endif %}
+            </div>
+        </section>
+
+        <!-- Features Section -->
+        <section class="features" id="features">
+            <div class="feature">
+                <div class="icon">🔍</div>
+                <h3>Multi-Threaded Scanning</h3>
+                <p>Lightning-fast port scanning with advanced multi-threading capabilities.</p>
+            </div>
+            <div class="feature">
+                <div class="icon">🛡️</div>
+                <h3>Security First</h3>
+                <p>Comprehensive security analysis with detailed vulnerability reports.</p>
+            </div>
+            <div class="feature">
+                <div class="icon">📊</div>
+                <h3>Real-Time Analytics</h3>
+                <p>Monitor scan progress and results in real-time with interactive visualizations.</p>
+            </div>
+        </section>
+
+        <!-- About Section -->
+        <section class="about-section" id="about">
+            <h2 class="section-title">Why Choose PortSentinel?</h2>
+            <div class="about-content">
+                <div class="about-text">
+                    <p>PortSentinel is a state-of-the-art port scanning solution designed for security professionals and network administrators.</p>
+                    <ul class="feature-list">
+                        <li>Advanced multi-threaded scanning engine</li>
+                        <li>Comprehensive port status analysis</li>
+                        <li>Detailed service identification</li>
+                        <li>Export results in multiple formats</li>
+                        <li>User-friendly interface with real-time updates</li>
+                    </ul>
+                </div>
+                <div class="about-image">
+                    <img src="{{ url_for('static', filename='images/abs.jpg') }}" alt="Network Security Visualization">
+                </div>
+            </div>
+        </section>
+
+        <!-- Feedback Section -->
+        <section class="feedback-section" id="feedback">
+            <h2 class="section-title">What Users Say</h2>
+            
+            <!-- Feedback Form -->
+            <div class="feedback-form-container">
+                <h3>Submit Your Feedback</h3>
+                <form id="feedback-form" class="feedback-form">
+                    <div class="form-group">
+                        <label for="feedback-name">Your Name</label>
+                        <input type="text" id="feedback-name" name="name" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Rating</label>
+                        <div class="star-rating">
+                            <input type="radio" id="star5" name="rating" value="5" checked>
+                            <label for="star5" title="5 stars">★</label>
+                            <input type="radio" id="star4" name="rating" value="4">
+                            <label for="star4" title="4 stars">★</label>
+                            <input type="radio" id="star3" name="rating" value="3">
+                            <label for="star3" title="3 stars">★</label>
+                            <input type="radio" id="star2" name="rating" value="2">
+                            <label for="star2" title="2 stars">★</label>
+                            <input type="radio" id="star1" name="rating" value="1">
+                            <label for="star1" title="1 star">★</label>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="feedback-message">Your Feedback</label>
+                        <textarea id="feedback-message" name="message" rows="4" required></textarea>
+                    </div>
+                    <button type="submit" class="submit-btn">Submit Feedback</button>
+                    <div id="feedback-status" class="feedback-status"></div>
+                </form>
+            </div>
+            
+            <!-- Feedback Display -->
+            <h3 class="feedback-title">User Testimonials</h3>
+            <div class="feedback-grid">
+                {% for feedback in approved_feedback %}
+                <div class="feedback-item">
+                    <div class="user-avatar">👤</div>
+                    <div class="rating-display">
+                        {% for i in range(5) %}
+                            <span class="star {% if i < feedback.rating %}filled{% endif %}">★</span>
+                        {% endfor %}
+                    </div>
+                    <p class="feedback-text">"{{ feedback.message }}"</p>
+                    <p class="user-name">{{ feedback.name }}</p>
+                </div>
+                {% endfor %}
+                
+                {% if not approved_feedback or approved_feedback|length == 0 %}
+                <div class="no-feedback">
+                    <p>No feedback submissions yet. Be the first to share your thoughts!</p>
+                </div>
+                {% endif %}
+            </div>
+        </section>
+    </div>
+
+    <!-- Footer -->
+    <footer class="glassy-footer">
+        <div class="footer-content">
+            <div class="footer-section">
+                <h3>PortSentinel</h3>
+                <p>Advanced port scanning solution for modern network security.</p>
+            </div>
+            <div class="footer-section">
+                <h3>Quick Links</h3>
+                <a href="#features">Features</a>
+                <a href="#about">About</a>
+                <a href="#feedback">Feedback</a>
+            </div>
+            <div class="footer-section">
+                <h3>Account</h3>
+                {% if session.get('user_id') %}
+                    <a href="{{ url_for('scanner_page') }}">Scanner Dashboard</a>
+                    <a href="{{ url_for('auth.logout') }}">Logout</a>
+                {% else %}
+                    <a href="{{ url_for('auth.login') }}">Login</a>
+                    <a href="{{ url_for('auth.signup') }}">Sign Up</a>
+                {% endif %}
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2024 PortSentinel. All rights reserved. <a href="{{ url_for('auth.privacy_policy') }}" class="footer-link">Privacy Policy</a></p>
+        </div>
+    </footer>
+    
+    <script src="{{ url_for('static', filename='js/responsive-navbar.js') }}"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Binary Rain Effect
+            const canvas = document.getElementById('binaryRain');
+            const ctx = canvas.getContext('2d');
+
+            // Set canvas size to match hero section
+            function resizeCanvas() {
+                const heroSection = document.querySelector('.hero-section');
+                canvas.width = heroSection.offsetWidth;
+                canvas.height = heroSection.offsetHeight;
+            }
+
+            // Initial resize
+            resizeCanvas();
+
+            // Resize canvas when window is resized
+            window.addEventListener('resize', resizeCanvas);
+
+            // Binary characters
+            const binaryChars = '01';
+            const fontSize = 14;
+            const columns = Math.floor(canvas.width / fontSize);
+            const drops = new Array(columns).fill(1);
+
+            // Set text properties
+            ctx.font = fontSize + 'px monospace';
+
+            function draw() {
+                // Semi-transparent black background for trail effect
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                // Set text color with gradient from cyan to purple
+                ctx.fillStyle = '#64ffd8';
+
+                // Draw the binary characters
+                for (let i = 0; i < drops.length; i++) {
+                    // Random binary character
+                    const char = binaryChars[Math.floor(Math.random() * binaryChars.length)];
+                    
+                    // Draw the character
+                    ctx.fillText(char, i * fontSize, drops[i] * fontSize);
+
+                    // Reset position if it reaches bottom or randomly
+                    if (drops[i] * fontSize > canvas.height && Math.random() > 0.98) {
+                        drops[i] = 0;
+                    }
+
+                    // Move drop
+                    drops[i]++;
+                }
+            }
+
+            // Animation loop
+            setInterval(draw, 50);
+
+            // Theme Switcher Logic
+            const themeSelect = document.getElementById('theme-select');
+
+            function applyTheme(themeName) {
+                document.body.className = '';
+                if (themeName !== 'default') {
+                    document.body.classList.add(themeName + '-theme');
+                }
+                localStorage.setItem('dashboardTheme', themeName);
+            }
+
+            // Set initial theme from localStorage
+            const savedTheme = localStorage.getItem('dashboardTheme') || 'default';
+            themeSelect.value = savedTheme;
+            applyTheme(savedTheme);
+
+            // Add event listener for theme changes
+            themeSelect.addEventListener('change', (e) => {
+                const theme = e.target.value;
+                applyTheme(theme);
+            });
+
+            // Feedback Form Submission
+            const feedbackForm = document.getElementById('feedback-form');
+            const feedbackStatus = document.getElementById('feedback-status');
+            
+            if (feedbackForm) {
+                feedbackForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    
+                    const name = document.getElementById('feedback-name').value;
+                    const message = document.getElementById('feedback-message').value;
+                    const rating = document.querySelector('input[name="rating"]:checked').value;
+                    
+                    feedbackStatus.textContent = '';
+                    
+                    // Send feedback to server
+                    fetch('/api/feedback/submit', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ name, message, rating })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            feedbackStatus.textContent = 'Thank you for your feedback!';
+                            feedbackStatus.classList.add('success');
+                            
+                            // Clear form
+                            document.getElementById('feedback-name').value = '';
+                            document.getElementById('feedback-message').value = '';
+                            document.getElementById('star5').checked = true;
+                            
+                            // Get the new feedback data from the response
+                            const newFeedback = data.feedback;
+                            
+                            // Add the new feedback to the UI
+                            const feedbackGrid = document.querySelector('.feedback-grid');
+                            const noFeedback = document.querySelector('.no-feedback');
+                            
+                            if (noFeedback) {
+                                noFeedback.style.display = 'none';
+                            }
+                            
+                            const feedbackItem = document.createElement('div');
+                            feedbackItem.classList.add('feedback-item');
+                            
+                            // Create star rating HTML
+                            const stars = Array(5).fill('★').map((star, index) => 
+                                `<span class="star ${index < newFeedback.rating ? 'filled' : ''}">${star}</span>`
+                            ).join('');
+                            
+                            feedbackItem.innerHTML = `
+                                <div class="user-avatar">👤</div>
+                                <div class="rating-display">
+                                    ${stars}
+                                </div>
+                                <p class="feedback-text">"${newFeedback.message}"</p>
+                                <p class="user-name">${newFeedback.name}</p>
+                            `;
+                            
+                            feedbackGrid.prepend(feedbackItem);
+                            
+                            // Animate feedback item
+                            setTimeout(() => {
+                                feedbackItem.classList.add('fade-in');
+                            }, 10);
+                        } else {
+                            feedbackStatus.textContent = 'Error submitting feedback. Please try again.';
+                            feedbackStatus.classList.add('error');
+                        }
+                        
+                        // Clear status after 3 seconds
+                        setTimeout(() => {
+                            feedbackStatus.textContent = '';
+                            feedbackStatus.classList.remove('success', 'error');
+                        }, 3000);
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        feedbackStatus.textContent = 'Error submitting feedback. Please try again.';
+                        feedbackStatus.classList.add('error');
+                    });
+                });
+            }
+        });
+    </script>
+</body>
+</html>

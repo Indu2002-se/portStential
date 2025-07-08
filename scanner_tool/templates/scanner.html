@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Port Scanner - PortSentinel</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='landing.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/responsive-navbar.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Interactive background elements -->
+    <div class="binary-rain"></div>
+    <div class="hud-element hud-element-1"></div>
+    <div class="hud-element hud-element-2"></div>
+    <div class="tech-circuit tech-circuit-1"></div>
+    <div class="tech-circuit tech-circuit-2"></div>
+    
+    <!-- Network scanning visualization -->
+    <div class="network-nodes">
+        <div class="network-node node-1"></div>
+        <div class="network-node node-2"></div>
+        <div class="network-node node-3"></div>
+        <div class="network-node node-4"></div>
+        <div class="network-connection conn-1"></div>
+        <div class="network-connection conn-2"></div>
+        <div class="port-indicator port-22"></div>
+        <div class="port-indicator port-80"></div>
+        <div class="port-indicator port-443"></div>
+    </div>
+
+    <!-- Responsive Glassy Navbar -->
+    <nav class="glassy-nav">
+        <div class="nav-content">
+            <button id="mobile-menu-btn" class="mobile-menu-btn" aria-label="Toggle menu" aria-expanded="false">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+            <div class="logo">PortSentinel</div>
+            <div class="nav-links-container">
+                <div class="nav-links">
+                    <a href="{{ url_for('scanner_page') }}" class="active">Scanner</a>
+                    <a href="{{ url_for('dashboard') }}">Dashboard</a>
+                    <a href="{{ url_for('export_history') }}">Export History</a>
+                </div>
+            </div>
+            <div class="nav-right-container">
+                <div class="theme-switcher">
+                    <select class="theme-select" id="theme-select">
+                        <option value="default">Default Theme</option>
+                        <option value="light">Light Theme</option>
+                        <option value="cyberpunk">Cyberpunk Theme</option>
+                    </select>
+                </div>
+                <div class="user-info">
+                    {% if session.get('username') %}
+                        <span class="username">{{ session.get('username') }}</span>
+                        <a href="{{ url_for('auth.logout') }}" class="nav-cta">Logout</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="cyber-lines-top"></div>
+        <div class="cyber-lines-bottom"></div>
+
+        <header>
+            <div class="header-top">
+                <div class="header-content">
+                    <div class="cyber-header">
+                        <span class="cyber-glitch" data-text="PORT·SCAN·v1.0">PORT·SCAN·v1.0</span>
+                        <h1>Advanced Network Reconnaissance</h1>
+                        <p class="subtitle">Penetrate networks and map service vulnerabilities</p>
+                        <div class="cyber-scanner"></div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <div class="card scan-config tech-card">
+            <div class="card-corner top-left"></div>
+            <div class="card-corner top-right"></div>
+            <div class="card-corner bottom-left"></div>
+            <div class="card-corner bottom-right"></div>
+            
+            <h2><span class="tech-icon">⚙</span> Scan Configuration</h2>
+            <div class="form-group">
+                <label for="target">Target Host:</label>
+                <div class="input-group">
+                    <input type="text" id="target" name="target" placeholder="Enter IP address or hostname" class="form-control tech-input">
+                    <button onclick="useLocalIP()" class="btn btn-secondary tech-btn">
+                        <span class="btn-text">Use Local IP</span>
+                        <span class="btn-icon">⟲</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="port-range">Port Range:</label>
+                <div class="input-group">
+                    <input type="text" id="port-range" name="port-range" placeholder="e.g., 80,443,8000-8100" class="form-control tech-input" value="21,22,23,25,80,443,3306,8080">
+                    <div class="checkbox-wrapper tech-checkbox">
+                        <input type="checkbox" id="use-predefined" name="use-predefined" checked>
+                        <label for="use-predefined">Use Predefined Ports</label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group advanced tech-panel">
+                <label for="threads">Threads:</label>
+                <input type="number" id="threads" name="threads" value="10" min="1" max="100" class="form-control-sm tech-input">
+                <div id="thread-warning" class="warning-message tech-warning" style="display: none;">
+                    <span class="warning-icon">⚠</span> High thread count may be limited for optimal performance
+                </div>
+
+                <label for="timeout">Timeout (s):</label>
+                <input type="number" id="timeout" name="timeout" value="1.0" min="0.1" max="10" step="0.1" class="form-control-sm tech-input">
+            </div>
+
+            <div class="button-group">
+                <button id="scan-button" onclick="startScan()" class="btn btn-primary tech-btn pulse-btn">
+                    <span class="btn-text">Start Scan</span>
+                    <span class="btn-icon">⚡</span>
+                </button>
+                <button id="stop-button" onclick="stopScan()" class="btn btn-danger tech-btn" disabled>
+                    <span class="btn-text">Stop Scan</span>
+                    <span class="btn-icon">✕</span>
+                </button>
+                <button id="export-button" onclick="showExportOptions()" class="btn btn-success tech-btn" disabled>
+                    <span class="btn-text">Export Results</span>
+                    <span class="btn-icon">↓</span>
+                </button>
+                <button onclick="clearResults()" class="btn btn-secondary tech-btn">
+                    <span class="btn-text">Clear</span>
+                    <span class="btn-icon">⟲</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="progress-section tech-progress">
+            <div class="progress-label">Progress:</div>
+            <div class="progress tech-progress-bar">
+                <div id="progress-bar" class="progress-bar"></div>
+            </div>
+            <div id="status-label" class="status-label tech-status">Ready</div>
+        </div>
+
+        <div class="card results-section tech-card">
+            <div class="card-corner top-left"></div>
+            <div class="card-corner top-right"></div>
+            <div class="card-corner bottom-left"></div>
+            <div class="card-corner bottom-right"></div>
+            
+            <div class="tab-navigation tech-tabs">
+                <button class="tab-button active" onclick="showTab('table-view')">
+                    <span class="tab-icon">◉</span> Table View
+                </button>
+                <button class="tab-button" onclick="showTab('log-view')">
+                    <span class="tab-icon">⋮</span> Log View
+                </button>
+            </div>
+
+            <div id="table-view" class="tab-content active">
+                <div class="table-container tech-table">
+                    <table id="results-table">
+                        <thead>
+                            <tr>
+                                <th>Host</th>
+                                <th>Port</th>
+                                <th>Status</th>
+                                <th>Service</th>
+                                <th>Version</th>
+                                <th>Server</th>
+                            </tr>
+                        </thead>
+                        <tbody id="results-body">
+                            <!-- Results will be inserted here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="log-view" class="tab-content">
+                <div id="log-container" class="log-container tech-console">
+                    <!-- Logs will be inserted here -->
+                </div>
+            </div>
+        </div>
+
+        <div id="export-modal" class="modal tech-modal">
+            <div class="modal-content">
+                <span class="close-button" onclick="closeExportModal()">&times;</span>
+                <h2>Export Scan Results</h2>
+                <p class="export-description">Choose the file format for exporting your scan results:</p>
+                <div class="export-options">
+                    <button onclick="exportResults('csv')" class="btn btn-primary export-btn tech-btn">
+                        <span class="export-icon">📊</span>
+                        <span class="export-text">
+                            <strong>CSV File</strong>
+                            <small>Comma-separated values for spreadsheets</small>
+                        </span>
+                    </button>
+                    <button onclick="exportResults('excel')" class="btn btn-primary export-btn tech-btn">
+                        <span class="export-icon">📈</span>
+                        <span class="export-text">
+                            <strong>Excel File</strong>
+                            <small>Formatted spreadsheet with styling</small>
+                        </span>
+                    </button>
+                    <button onclick="exportResults('pdf')" class="btn btn-primary export-btn tech-btn">
+                        <span class="export-icon">📄</span>
+                        <span class="export-text">
+                            <strong>PDF Report</strong>
+                            <small>Professional document format</small>
+                        </span>
+                    </button>
+                    <button onclick="closeExportModal()" class="btn btn-secondary tech-btn">Cancel</button>
+                </div>
+            </div>
+        </div>
+
+        <footer class="tech-footer">
+            <p>PortSentinel v1.0.0 | <span id="current-time"></span> | <a href="{{ url_for('auth.privacy_policy') }}" class="footer-link" target="_blank">Privacy Policy</a></p>
+        </footer>
+    </div>
+
+    <div id="toast-container"></div>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/responsive-navbar.js') }}"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // Theme Switcher
+            const themeSelect = document.getElementById('theme-select');
+
+            function applyTheme(themeName) {
+                document.body.className = '';
+                if (themeName !== 'default') {
+                    document.body.classList.add(themeName + '-theme');
+                }
+                localStorage.setItem('dashboardTheme', themeName);
+            }
+
+            // Set initial theme from localStorage
+            const savedTheme = localStorage.getItem('dashboardTheme') || 'default';
+            themeSelect.value = savedTheme;
+            applyTheme(savedTheme);
+
+            // Add event listener for theme changes
+            themeSelect.addEventListener('change', (e) => {
+                const theme = e.target.value;
+                applyTheme(theme);
+            });
+        });
+
+        function pollScanStatus(scanId) {
+            const intervalId = setInterval(() => {
+                fetch(`/api/scan/${scanId}/status`)
+                    .then(response => response.json())
+                    .then(data => {
+                        updateScanProgress(data);
+                        if (data.status === 'completed' || data.status === 'error') {
+                            clearInterval(intervalId);
+                            if (data.status === 'completed' && data.results) {
+                                // Create a form to post the results
+                                const form = document.createElement('form');
+                                form.method = 'POST';
+                                form.action = '/export-history';
+
+                                // Add the scan results as a hidden input
+                                const resultsInput = document.createElement('input');
+                                resultsInput.type = 'hidden';
+                                resultsInput.name = 'scan_results';
+                                resultsInput.value = JSON.stringify(data.results);
+                                form.appendChild(resultsInput);
+
+                                // Add the scan ID
+                                const scanIdInput = document.createElement('input');
+                                scanIdInput.type = 'hidden';
+                                scanIdInput.name = 'scan_id';
+                                scanIdInput.value = scanId;
+                                form.appendChild(scanIdInput);
+                                
+                                // Add the target host
+                                const targetInput = document.createElement('input');
+                                targetInput.type = 'hidden';
+                                targetInput.name = 'target_host';
+                                targetInput.value = document.getElementById('target').value;
+                                form.appendChild(targetInput);
+
+                                // Append the form to the body and submit it
+                                document.body.appendChild(form);
+                                form.submit();
+                            }
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error fetching scan status:', error);
+                        clearInterval(intervalId);
+                        updateScanProgress({ status: 'error', error: 'Failed to fetch status.' });
+                    });
+            }, 2000);
+        }
+
+        function displayScanResults(results) {
+            // ... existing code ...
+        }
+
+        // Export results
+        function exportResults(format) {
+            if (!scanId) {
+                alert("Please complete a scan before exporting.");
+                return;
+            }
+
+            // Correctly select the button that was clicked
+            const exportButton = event.currentTarget;
+            const originalText = exportButton.innerHTML;
+            exportButton.innerHTML = `<span>Exporting...</span>`;
+            exportButton.disabled = true;
+
+            fetch(`/api/export/${format}?scan_id=${scanId}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.blob();
+                })
+                .then(blob => {
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.style.display = 'none';
+                    a.href = url;
+                    a.download = `scan_results_${scanId}.${format}`;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    a.remove();
+                    
+                    // Hide modal and restore button
+                    closeExportModal();
+                    exportButton.innerHTML = originalText;
+                    exportButton.disabled = false;
+                })
+                .catch(err => {
+                    alert('Error exporting results. Please try again.');
+                    console.error('Export error:', err);
+                    // Hide modal and restore button
+                    closeExportModal();
+                    exportButton.innerHTML = originalText;
+                    exportButton.disabled = false;
+                });
+        }
+    </script>
+</body>
+</html> 

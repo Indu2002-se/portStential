@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Up - PortSentinel</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='landing.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='auth.css') }}">
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="background-animation"></div>
+
+    <div class="theme-switcher-corner">
+        <button class="theme-btn" id="theme-switcher-btn">🎨</button>
+        <div class="theme-dropdown" id="theme-dropdown">
+            <a href="#" data-theme="default">Default</a>
+            <a href="#" data-theme="light">Light</a>
+            <a href="#" data-theme="cyberpunk">Cyberpunk</a>
+        </div>
+    </div>
+
+   
+
+    <div class="auth-container">
+        <div class="theme-switcher">
+            <select class="theme-select" id="theme-select">
+                <option value="default">Default Theme</option>
+                <option value="light">Light Theme</option>
+                <option value="cyberpunk">Cyberpunk Theme</option>
+            </select>
+        </div>
+        <div class="glassy-card auth-card">
+            <div class="card-corner top-left"></div>
+            <div class="card-corner top-right"></div>
+            <div class="card-corner bottom-left"></div>
+            <div class="card-corner bottom-right"></div>
+            
+            <div class="auth-header">
+                <h1 class="cyber-glitch" data-text="SIGN UP">SIGN UP</h1>
+                <div class="cyber-scanner"></div>
+            </div>
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+            
+            <form method="POST" action="{{ url_for('auth.signup') }}" class="auth-form">
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" name="username" class="form-control tech-input" required>
+                    <div class="input-focus-effect"></div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" name="email" class="form-control tech-input" required>
+                    <div class="input-focus-effect"></div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" class="form-control tech-input" required>
+                    <div class="input-focus-effect"></div>
+                </div>
+                
+                <div class="form-group privacy-checkbox">
+                    <input type="checkbox" id="privacy_agree" name="privacy_agree" required>
+                    <label for="privacy_agree">I agree to the <a href="{{ url_for('auth.privacy_policy') }}" target="_blank" class="cyber-link">Privacy Policy</a></label>
+                </div>
+                
+                <button type="submit" class="btn btn-primary tech-btn pulse-btn">
+                    <span class="btn-text">Create Account</span>
+                    <span class="btn-icon">⟶</span>
+                </button>
+            </form>
+            
+            <div class="auth-footer">
+                <p>Already have an account? <a href="{{ url_for('auth.login') }}" class="cyber-link">Login</a></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Theme Switcher
+            const themeSelect = document.getElementById('theme-select');
+
+            function applyTheme(themeName) {
+                document.body.className = '';
+                if (themeName !== 'default') {
+                    document.body.classList.add(themeName + '-theme');
+                }
+                localStorage.setItem('dashboardTheme', themeName);
+            }
+
+            // Set initial theme from localStorage
+            const savedTheme = localStorage.getItem('dashboardTheme') || 'default';
+            themeSelect.value = savedTheme;
+            applyTheme(savedTheme);
+
+            // Add event listener for theme changes
+            themeSelect.addEventListener('change', (e) => {
+                const theme = e.target.value;
+                applyTheme(theme);
+            });
+        });
+    </script>
+    <script src="{{ url_for('static', filename='js/responsive-navbar.js') }}"></script>
+</body>
+</html> 

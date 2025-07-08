@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Export History - PortSentinel</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='landing.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/responsive-navbar.css') }}">
+    <style>
+        .exports-container {
+            max-width: 1200px;
+            margin: 50px auto;
+            padding: 20px;
+            background: var(--bg-element);
+            border-radius: 20px;
+            border: 1px solid var(--border-color);
+        }
+        
+        .page-title {
+            font-size: 2rem;
+            color: var(--text-primary);
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        
+        .exports-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        
+        .exports-table th,
+        .exports-table td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .exports-table th {
+            background: rgba(0, 0, 0, 0.2);
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+        
+        .exports-table tr:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+        
+        .export-format {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        
+        .format-csv {
+            background: rgba(76, 175, 80, 0.2);
+            color: #4caf50;
+        }
+        
+        .format-excel {
+            background: rgba(33, 150, 243, 0.2);
+            color: #2196f3;
+        }
+        
+        .format-pdf {
+            background: rgba(244, 67, 54, 0.2);
+            color: #f44336;
+        }
+        
+        .download-btn {
+            display: inline-block;
+            background: var(--accent-primary);
+            color: #fff;
+            padding: 8px 15px;
+            border-radius: 5px;
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+        
+        .download-btn:hover {
+            background: var(--accent-secondary);
+            transform: translateY(-2px);
+        }
+        
+        .no-exports {
+            text-align: center;
+            padding: 50px 0;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+        
+        .file-size {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+        
+        .action-column {
+            text-align: center;
+        }
+        
+        .summary-column {
+            max-width: 300px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+    </style>
+</head>
+<body>
+    <div class="binary-rain"></div>
+    
+    <!-- Responsive Glassy Navbar -->
+    <nav class="glassy-nav">
+        <div class="nav-content">
+            <button id="mobile-menu-btn" class="mobile-menu-btn" aria-label="Toggle menu" aria-expanded="false">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+            <div class="logo">PortSentinel</div>
+            <div class="nav-links-container">
+                <div class="nav-links">
+                    <a href="/scanner">Scanner</a>
+                    <a href="/dashboard">Dashboard</a>
+                    <a href="/export-history" class="active">Export History</a>
+                </div>
+            </div>
+           
+            <div class="nav-right-container">
+                <div class="theme-switcher">
+                    <select class="theme-select" id="theme-select">
+                        <option value="default">Default Theme</option>
+                        <option value="light">Light Theme</option>
+                        <option value="cyberpunk">Cyberpunk Theme</option>
+                    </select>
+                </div>
+                <div class="user-info">
+                    <span class="username">{{ session.get('username', 'User') }}</span>
+                    <a href="{{ url_for('auth.logout') }}" class="nav-cta">Logout</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="dashboard-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="main-header">
+            </header>
+
+            <section class="content-section">
+                {% if scan_results %}
+                <div class="glassy-card card-large">
+                    <h2 class="section-title">Scan Results for {{ target_host }}</h2>
+                    <p class="text-muted">Scan ID: {{ scan_id }}</p>
+                    <div class="results-table-container">
+                        <table class="results-table">
+                            <thead>
+                                <tr>
+                                    <th>Port</th>
+                                    <th>Status</th>
+                                    <th>Service</th>
+                                    <th>Version</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for result in scan_results %}
+                                <tr>
+                                    <td>{{ result.port }}</td>
+                                    <td class="status-{{ result.status | lower }}">{{ result.status }}</td>
+                                    <td>{{ result.service }}</td>
+                                    <td>{{ result.version }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if exports and exports|length > 0 %}
+                <div class="glassy-card card-medium">
+                    <h2 class="section-title">Export Statistics</h2>
+                    <div class="stats-container" style="display: flex; justify-content: space-around; text-align: center; margin: 20px 0;">
+                        <div class="stat-item">
+                            <div class="stat-value" style="font-size: 2rem; font-weight: bold; color: var(--accent-primary);">{{ exports|length }}</div>
+                            <div class="stat-label">Total Exports</div>
+                        </div>
+
+                        {% set formats = {} %}
+                        {% set hosts = {} %}
+                        {% for exp in exports %}
+                            {% set format = exp.export_format|upper %}
+                            {% set _ = formats.update({format: formats.get(format, 0) + 1}) %}
+                            
+                            {% set host = exp.target_host %}
+                            {% set _ = hosts.update({host: hosts.get(host, 0) + 1}) %}
+                        {% endfor %}
+
+                        {% set most_common_format = '' %}
+                        {% set max_format_count = 0 %}
+                        {% for format, count in formats.items() %}
+                            {% if count > max_format_count %}
+                                {% set most_common_format = format %}
+                                {% set max_format_count = count %}
+                            {% endif %}
+                        {% endfor %}
+
+                        {% set most_scanned_host = '' %}
+                        {% set max_host_count = 0 %}
+                        {% for host, count in hosts.items() %}
+                            {% if count > max_host_count %}
+                                {% set most_scanned_host = host %}
+                                {% set max_host_count = count %}
+                            {% endif %}
+                        {% endfor %}
+
+                        <div class="stat-item">
+                            <div class="stat-value" style="font-size: 1.8rem; font-weight: bold; color: var(--accent-primary);">{{ most_common_format }}</div>
+                            <div class="stat-label">Preferred Format</div>
+                        </div>
+                        
+                        <div class="stat-item">
+                            <div class="stat-value" style="font-size: 1.8rem; font-weight: bold; color: var(--accent-primary);">{{ most_scanned_host }}</div>
+                            <div class="stat-label">Most Scanned Host</div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <div class="glassy-card card-large">
+                    <h2 class="section-title">Export History</h2>
+                    <div class="history-table-container">
+                        <div class="action-buttons" style="margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
+                            <div class="filter-container" style="display: flex; gap: 10px; flex: 1;">
+                                <input type="text" id="filter-input" placeholder="Search by host or summary..." 
+                                       style="padding: 8px; border-radius: 5px; border: 1px solid var(--border-color); 
+                                       background: rgba(0,0,0,0.2); color: var(--text-primary); flex: 1;">
+                                
+                                <select id="format-filter" style="padding: 8px; border-radius: 5px; border: 1px solid var(--border-color); 
+                                        background: rgba(0,0,0,0.2); color: var(--text-primary);">
+                                    <option value="">All Formats</option>
+                                    <option value="csv">CSV</option>
+                                    <option value="excel">Excel</option>
+                                    <option value="pdf">PDF</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        {% if exports is defined and exports|length > 0 %}
+                            <table class="exports-table">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Target Host</th>
+                                        <th>Format</th>
+                                        <th>Summary</th>
+                                        <th>Size</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for exp in exports %}
+                                    <tr>
+                                        <td>
+                                            {% if exp.created_at %}
+                                                {{ exp.created_at }}
+                                            {% elif exp.export_date %}
+                                                {{ exp.export_date }}
+                                            {% else %}
+                                                N/A
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ exp.target_host if exp.target_host else "Unknown" }}</td>
+                                        <td>
+                                            {% if exp.export_format %}
+                                                <span class="export-format format-{{ exp.export_format|lower }}">{{ exp.export_format|upper }}</span>
+                                            {% else %}
+                                                <span class="export-format">UNKNOWN</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="summary-column" title="{{ exp.summary if exp.summary else '' }}">
+                                            {{ exp.summary if exp.summary else "No summary available" }}
+                                        </td>
+                                        <td class="file-size">
+                                            {% if exp.file_size is defined and exp.file_size is not none %}
+                                                {% set file_size = exp.file_size %}
+                                                {% if file_size > 1024 * 1024 %}
+                                                    {{ (file_size / (1024 * 1024))|round(2) }} MB
+                                                {% elif file_size > 1024 %}
+                                                    {{ (file_size / 1024)|round(2) }} KB
+                                                {% else %}
+                                                    {{ file_size }} B
+                                                {% endif %}
+                                            {% else %}
+                                                Unknown size
+                                            {% endif %}
+                                        </td>
+                                        <td class="action-column">
+                                            {% if exp.id is defined %}
+                                                <a href="/api/export/{{ exp.id }}/download" class="download-btn">Download</a>
+                                            {% else %}
+                                                <span class="download-btn" style="opacity: 0.5; cursor: not-allowed;">No ID</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        {% else %}
+                            <div class="no-exports">
+                                <p>No export history found. Start scanning and exporting results to see them here.</p>
+                            </div>
+                        {% endif %}
+                        
+                        {% if debug_info is defined %}
+                        <!-- Debug Information - Hidden by default -->
+                        <div class="debug-info" style="margin-top: 20px; padding: 15px; background: rgba(0,0,0,0.4); border-radius: 10px; display: none;">
+                            <h3 style="color: var(--accent-primary);">Debug Information</h3>
+                            <pre style="color: var(--text-primary); overflow-x: auto; white-space: pre-wrap;">{{ debug_info|tojson(indent=2) }}</pre>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Theme Switcher Logic
+            const themeSelect = document.getElementById('theme-select');
+            const savedTheme = localStorage.getItem('dashboardTheme') || 'default';
+
+            function applyTheme(themeName) {
+                document.body.className = ''; // Reset classes
+                if (themeName !== 'default') {
+                    document.body.classList.add(themeName + '-theme');
+                }
+                localStorage.setItem('dashboardTheme', themeName);
+            }
+
+            themeSelect.value = savedTheme;
+            applyTheme(savedTheme);
+
+            themeSelect.addEventListener('change', (e) => {
+                applyTheme(e.target.value);
+            });
+
+            // Refresh functionality removed
+            
+            // If we have an empty table, try to load data directly from API
+            const noExportsElem = document.querySelector('.no-exports');
+            if (noExportsElem) {
+                // Add loading indicator
+                const loadingElem = document.createElement('div');
+                loadingElem.className = 'loading-indicator';
+                loadingElem.innerHTML = '<p>Attempting to load directly from API...</p>';
+                loadingElem.style.textAlign = 'center';
+                loadingElem.style.padding = '10px';
+                loadingElem.style.marginTop = '20px';
+                loadingElem.style.color = 'var(--accent-primary)';
+                noExportsElem.appendChild(loadingElem);
+                
+                // Try to fetch data directly from API
+                fetch('/api/exports')
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP error ${response.status}`);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        // If we have exports data and it's in the right format
+                        if (data && (data.exports || Array.isArray(data))) {
+                            const exports = data.exports || data;
+                            // Log the entire data structure for debugging
+                            console.log("API Data:", data);
+                            
+                            if (exports.length > 0) {
+                                // We have data! Create the table
+                                const tableContainer = document.querySelector('.history-table-container');
+                                noExportsElem.style.display = 'none';
+                            
+                                // Create the table
+                                const table = document.createElement('table');
+                                table.className = 'exports-table';
+                                
+                                // Add header
+                                const thead = document.createElement('thead');
+                                thead.innerHTML = `
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Target Host</th>
+                                        <th>Format</th>
+                                        <th>Summary</th>
+                                        <th>Size</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                `;
+                                table.appendChild(thead);
+                                
+                                // Create tbody
+                                const tbody = document.createElement('tbody');
+                                
+                                // Add rows for each export
+                                exports.forEach(exp => {
+                                const row = document.createElement('tr');
+                                
+                                    // Format date - use either created_at or export_date
+                                    const createdAt = exp.created_at || exp.export_date || 'N/A';
+                                    
+                                    // Format size
+                                    let sizeText = 'Unknown';
+                                    if (exp.file_size !== undefined) {
+                                        const fileSize = exp.file_size;
+                                if (fileSize > 1024 * 1024) {
+                                            sizeText = `${(fileSize / (1024 * 1024)).toFixed(2)} MB`;
+                                } else if (fileSize > 1024) {
+                                            sizeText = `${(fileSize / 1024).toFixed(2)} KB`;
+                                        } else {
+                                            sizeText = `${fileSize} B`;
+                                        }
+                                    }
+                                    
+                                    // Format
+                                    const format = exp.export_format || 'UNKNOWN';
+                                    
+                                    // Action button
+                                    const actionBtn = exp.id ? 
+                                        `<a href="/api/export/${exp.id}/download" class="download-btn">Download</a>` : 
+                                        '<span class="download-btn" style="opacity: 0.5; cursor: not-allowed;">No ID</span>';
+
+                                row.innerHTML = `
+                                        <td>${createdAt}</td>
+                                        <td>${exp.target_host || 'Unknown'}</td>
+                                        <td><span class="export-format format-${format.toLowerCase()}">${format.toUpperCase()}</span></td>
+                                        <td class="summary-column" title="${exp.summary || ''}">${exp.summary || 'No summary'}</td>
+                                        <td class="file-size">${sizeText}</td>
+                                        <td class="action-column">${actionBtn}</td>
+                                    `;
+                                    
+                                    tbody.appendChild(row);
+                                });
+                                
+                                table.appendChild(tbody);
+                                tableContainer.insertBefore(table, loadingElem);
+                                loadingElem.innerHTML = '<p>Data loaded from API!</p>';
+                                
+                                // Setup filters for the new table
+                                const filterInput = document.getElementById('filter-input');
+                                const formatFilter = document.getElementById('format-filter');
+                                const tableRows = document.querySelectorAll('.exports-table tbody tr');
+                                
+                                function applyFilters() {
+                                    const searchText = filterInput.value.toLowerCase();
+                                    const formatValue = formatFilter.value.toLowerCase();
+                                    
+                                    tableRows.forEach(row => {
+                                        const host = row.querySelector('td:nth-child(2)').textContent.toLowerCase();
+                                        const summary = row.querySelector('.summary-column').textContent.toLowerCase();
+                                        const format = row.querySelector('.export-format').textContent.toLowerCase();
+                                        
+                                        const matchesSearch = !searchText || host.includes(searchText) || summary.includes(searchText);
+                                        const matchesFormat = !formatValue || format.includes(formatValue);
+                                        
+                                        row.style.display = (matchesSearch && matchesFormat) ? '' : 'none';
+                                    });
+                                }
+                                
+                                if (filterInput && formatFilter && tableRows.length > 0) {
+                                    filterInput.addEventListener('input', applyFilters);
+                                    formatFilter.addEventListener('change', applyFilters);
+                                }
+                            } else {
+                                loadingElem.innerHTML = '<p>No export records found in API response.</p>';
+                            }
+                            
+                            // Add debug info if available
+                            if (data.debug_info) {
+                                const debugContainer = document.createElement('div');
+                                debugContainer.className = 'debug-info';
+                                debugContainer.style.marginTop = '20px';
+                                debugContainer.style.padding = '15px';
+                                debugContainer.style.background = 'rgba(0,0,0,0.4)';
+                                debugContainer.style.borderRadius = '10px';
+                                debugContainer.style.display = 'none';
+                                
+                                debugContainer.innerHTML = `
+                                    <h3 style="color: var(--accent-primary);">API Debug Information</h3>
+                                    <pre style="color: var(--text-primary); overflow-x: auto; white-space: pre-wrap;">${JSON.stringify(data.debug_info, null, 2)}</pre>
+                                `;
+                                
+                                const debugBtn = document.createElement('button');
+                                debugBtn.id = 'toggle-api-debug';
+                                debugBtn.className = 'download-btn';
+                                debugBtn.style.background = 'rgba(0,0,0,0.4)';
+                                debugBtn.style.marginTop = '10px';
+                                debugBtn.textContent = 'Show API Debug Info';
+                                
+                                const debugBtnContainer = document.createElement('div');
+                                debugBtnContainer.style.textAlign = 'center';
+                                debugBtnContainer.style.marginTop = '10px';
+                                debugBtnContainer.appendChild(debugBtn);
+                                
+                                document.querySelector('.history-table-container').appendChild(debugContainer);
+                                document.querySelector('.history-table-container').appendChild(debugBtnContainer);
+                                
+                                debugBtn.addEventListener('click', function() {
+                                    const isVisible = debugContainer.style.display !== 'none';
+                                    debugContainer.style.display = isVisible ? 'none' : 'block';
+                                    debugBtn.textContent = isVisible ? 'Show API Debug Info' : 'Hide API Debug Info';
+                                });
+                            }
+                        } else {
+                            loadingElem.innerHTML = '<p>Invalid data format received from API.</p>';
+                        }
+                    })
+                    .catch(error => {
+                        loadingElem.innerHTML = `<p>Error loading from API: ${error.message}</p>`;
+                        console.error("API loading error:", error);
+                    });
+            }
+            
+            // Debug toggle functionality removed
+            
+            // Add filter functionality
+            const filterInput = document.getElementById('filter-input');
+            const formatFilter = document.getElementById('format-filter');
+            const tableRows = document.querySelectorAll('.exports-table tbody tr');
+            
+            function applyFilters() {
+                const searchText = filterInput.value.toLowerCase();
+                const formatValue = formatFilter.value.toLowerCase();
+                
+                tableRows.forEach(row => {
+                    const host = row.querySelector('td:nth-child(2)').textContent.toLowerCase();
+                    const summary = row.querySelector('.summary-column').textContent.toLowerCase();
+                    const format = row.querySelector('.export-format').textContent.toLowerCase();
+                    
+                    const matchesSearch = !searchText || host.includes(searchText) || summary.includes(searchText);
+                    const matchesFormat = !formatValue || format.includes(formatValue);
+                    
+                    row.style.display = (matchesSearch && matchesFormat) ? '' : 'none';
+                });
+                
+                // Show/hide no results message
+                const visibleRows = document.querySelectorAll('.exports-table tbody tr:not([style="display: none;"])');
+                const noResultsElem = document.querySelector('.no-results-message');
+                
+                if (visibleRows.length === 0 && tableRows.length > 0) {
+                    if (!noResultsElem) {
+                        const message = document.createElement('div');
+                        message.className = 'no-results-message';
+                        message.style.textAlign = 'center';
+                        message.style.padding = '20px';
+                        message.style.color = 'var(--text-secondary)';
+                        message.textContent = 'No exports match your filter criteria.';
+                        
+                        const container = document.querySelector('.history-table-container');
+                        container.appendChild(message);
+                        }
+                } else if (noResultsElem) {
+                    noResultsElem.remove();
+                }
+            }
+            
+            if (filterInput && formatFilter && tableRows.length > 0) {
+                filterInput.addEventListener('input', applyFilters);
+                formatFilter.addEventListener('change', applyFilters);
+            }
+        });
+    </script>
+    
+    <!-- Add Font Awesome for icons -->
+    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+    <script src="{{ url_for('static', filename='js/responsive-navbar.js') }}"></script>
+</body>
+</html> 
