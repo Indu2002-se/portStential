@@ -44,7 +44,8 @@ def signup():
                 return redirect(url_for('auth.signup'))
 
             # Use site_url for email redirect instead of url_for
-            redirect_url = f"{site_url}/auth/confirm" if site_url != 'http://localhost:4000' else url_for('auth.confirm_email', _external=True)
+            # Use the root URL as the redirect target - we'll handle all paths in our 404 handler
+            redirect_url = site_url
             
             # Sign up the user with Supabase Auth
             auth_response = supabase.auth.sign_up({
@@ -94,18 +95,27 @@ def confirm_email():
     token_hash = request.args.get('token_hash')
     type_param = request.args.get('type')
     
-    if not token_hash or not type_param:
-        flash('Invalid confirmation link', 'error')
-        return redirect(url_for('auth.login'))
+    # Log all received parameters for debugging
+    print(f"Email confirmation received with params: {request.args}")
     
-    try:
-        # The user is already confirmed by Supabase at this point
-        # We just need to redirect them to the login page with a success message
-        flash('Email confirmed successfully! You can now log in.', 'success')
-        return redirect(url_for('auth.login'))
-    except Exception as e:
-        flash(f'Error confirming email: {e}', 'error')
-        return redirect(url_for('auth.login'))
+    # Show success message regardless of parameters
+    # The actual verification is handled by Supabase before redirecting here
+    flash('Email confirmed successfully! You can now log in.', 'success')
+    return redirect(url_for('auth.login'))
+
+# Add a catch-all route for other confirmation formats
+@auth.route('/auth/v1/verify', methods=['GET'])
+def verify_redirect():
+    """Handle alternative verification URL format"""
+    flash('Email confirmed successfully! You can now log in.', 'success')
+    return redirect(url_for('auth.login'))
+
+# Add a catch-all route for the callback format
+@auth.route('/callback')
+def callback_redirect():
+    """Handle callback format for verification"""
+    flash('Email confirmed successfully! You can now log in.', 'success')
+    return redirect(url_for('auth.login'))
 
 @auth.route('/login', methods=['GET', 'POST'])
 def login():

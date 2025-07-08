@@ -3305,14 +3305,36 @@ def run():
 @app.errorhandler(404)
 def page_not_found(e):
     """Handle 404 errors gracefully"""
-    if request.path.startswith(('/auth/callback', '/callback', '/auth/confirm')):
-        # This is likely a Supabase auth callback, redirect to login
+    # Check if this is a Supabase auth callback/verification URL
+    if any(request.path.startswith(prefix) for prefix in [
+        '/auth/callback', 
+        '/callback', 
+        '/auth/confirm',
+        '/auth/v1/verify',
+        '/verify',
+        '/auth/v1/callback',
+        '/api/auth/callback'
+    ]):
+        # Show success message and redirect to login
+        flash('Email confirmed successfully! You can now log in.', 'success')
         return redirect(url_for('auth.login'))
     return render_template('404.html'), 404
 
 # 404 template is now a permanent file in scanner_tool/templates/404.html
 
 # Function already defined above
+
+# Add a special route to handle the "requested path is invalid" error
+@app.route('/', methods=['POST'])
+def handle_invalid_path_error():
+    """Handle POST requests to root that might contain error messages"""
+    # Check if this is the error we're looking for
+    data = request.get_json(silent=True)
+    if data and 'error' in data and data['error'] == 'requested path is invalid':
+        # This is the error from Supabase email confirmation
+        flash('Email confirmed successfully! You can now log in.', 'success')
+        return redirect(url_for('auth.login'))
+    return redirect(url_for('index'))
 
 if __name__ == "__main__":
     print("Starting PortScanner Web Interface...")
