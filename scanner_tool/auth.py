@@ -55,7 +55,7 @@ def signup():
                     "data": {
                         "username": username
                     },
-                    "email_redirect_to": redirect_url
+                    "email_redirect_to": https://portstential-production.up.railway.app/login
                 }
             })
 
